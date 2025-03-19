@@ -97,17 +97,24 @@ namespace Nostr.Client.Messages.Direct
         private void TryExtractContent(string? content)
         {
             if (string.IsNullOrWhiteSpace(content))
-                return;
-
-            var split = content.Split(IvSeparator);
-            if (split.Length < 1)
             {
-                EncryptedContent = split[0];
+                EncryptedContent = null;
+                InitializationVector = null;
                 return;
             }
 
-            EncryptedContent = split[0];
-            InitializationVector = split[1];
+            var separatorIndex = content.IndexOf(IvSeparator, StringComparison.Ordinal);
+            if (separatorIndex == -1)
+            {
+                // No IV separator found, treat the entire content as encrypted content
+                EncryptedContent = content;
+                InitializationVector = null;
+                return;
+            }
+
+            // Extract content before separator and IV after separator
+            EncryptedContent = content[..separatorIndex];
+            InitializationVector = content[(separatorIndex + IvSeparator.Length)..];
         }
     }
 }
