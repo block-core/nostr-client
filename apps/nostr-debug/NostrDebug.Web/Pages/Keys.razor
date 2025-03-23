@@ -82,7 +82,12 @@
         </FluentTextField>
         
         <NostrSignatureValidator PublicOrPrivateKey="@_publicOrPrivateKeyForSignature" SignedData="@_dataForSignature" Signature="@_signature"></NostrSignatureValidator>
+    </div>
 
+    <h3><FluentIcon Name="@FluentIcons.CalculatorMultiple" Size="@IconSize.Size20" Variant="@IconVariant.Regular" Color="@Color.Neutral" /> Proof of Work (NIP-13)</h3>
+    
+    <div class="conversion-group">
+        <NostrPowValidator EventId="@_powEventId" Nonce="@_powNonce" TargetDifficulty="@_powTargetDifficulty"></NostrPowValidator>
     </div>
 
 </Stack>
@@ -97,6 +102,10 @@
     string? _publicOrPrivateKeyForSignature;
     string? _dataForSignature;
     string? _signature;
+    
+    string? _powEventId = "";
+    string? _powNonce = "";
+    int _powTargetDifficulty = 16;
 
     private void OnGenerate()
     {

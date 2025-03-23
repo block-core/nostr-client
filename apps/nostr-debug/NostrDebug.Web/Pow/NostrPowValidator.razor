@@ -1,0 +1,341 @@
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Cryptography
+@using System.Threading.Tasks
+@using System.Threading
+@using System.Text
+
+<div class="pow-container">
+    <FluentTextField Style="width: 100%" Placeholder="hex" ValueExpression="() => EventId" Value="@EventId" @oninput="EventIdChanged" class="m-b-1">
+        <FluentIcon Name="@FluentIcons.Document" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
+        <strong>Event ID</strong>
+    </FluentTextField>
+    
+    <FluentNumberField Style="width: 100%" Min="0" Max="256" Placeholder="Target difficulty" ValueExpression="() => TargetDifficulty" Value="@TargetDifficulty" @oninput="TargetDifficultyChanged" class="m-b-1">
+        <FluentIcon Name="@FluentIcons.NumberSymbol" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
+        <strong>Target Difficulty</strong>
+    </FluentNumberField>
+
+    @if (_isCalculating)
+    {
+        <div class="pow-progress">
+            <Stack Orientation="Orientation.Horizontal" VerticalAlignment="StackVerticalAlignment.Center">
+                <FluentProgressRing />
+                <span>Computing difficulty...</span>
+            </Stack>
+        </div>
+    }
+    else if (_computedDifficulty.HasValue)
+    {
+        <div class="m-b-1">
+            <strong>Computed Difficulty: </strong> @_computedDifficulty
+        </div>
+        
+        @if (_computedDifficulty.Value >= TargetDifficulty)
+        {
+            <div class="pow-valid">
+                <Stack Orientation="Orientation.Horizontal" VerticalAlignment="StackVerticalAlignment.Center" HorizontalAlignment="StackHorizontalAlignment.Center">
+                    <FluentIcon Name="@FluentIcons.CheckmarkCircle" Slot="start" Size="@IconSize.Size20" Color="Color.Success"/>
+                    <strong>Valid PoW: difficulty @_computedDifficulty.Value ≥ @TargetDifficulty</strong>
+                </Stack>
+            </div>
+        }
+        else
+        {
+            <div class="pow-invalid">
+                <Stack Orientation="Orientation.Horizontal" VerticalAlignment="StackVerticalAlignment.Center" HorizontalAlignment="StackHorizontalAlignment.Center">
+                    <FluentIcon Name="@FluentIcons.ErrorCircle" Slot="start" Size="@IconSize.Size20" Color="Color.Error"/>
+                    <strong>Invalid PoW: difficulty @_computedDifficulty.Value &lt; @TargetDifficulty</strong>
+                </Stack>
+            </div>
+        }
+    }
+    
+    <FluentDivider class="m-t-1 m-b-1" />
+    
+    <FluentTextField Style="width: 100%" Placeholder="hex" ValueExpression="() => Nonce" Value="@Nonce" @oninput="NonceChanged" class="m-b-1">
+        <FluentIcon Name="@FluentIcons.Key" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
+        <strong>Nonce (optional)</strong>
+    </FluentTextField>
+    
+    <Stack Orientation="Orientation.Horizontal" HorizontalGap="10" class="m-b-1">
+        <FluentNumberField Min="0" Max="32" ValueExpression="() => _nonceSize" Value="@_nonceSize" @oninput="NonceSizeChanged">
+            <strong>Nonce Size</strong>
+        </FluentNumberField>
+
+        <FluentButton Appearance="Appearance.Accent" @onclick="GeneratePoW" Disabled="@(_isGenerating || string.IsNullOrEmpty(EventId))">
+            <FluentIcon Name="@FluentIcons.CalculatorMultiple" Slot="start" Size="@IconSize.Size16" Color="Color.Fill" />
+            Generate PoW
+        </FluentButton>
+        
+        @if (_isGenerating)
+        {
+            <Stack Orientation="Orientation.Horizontal" VerticalAlignment="StackVerticalAlignment.Center">
+                <FluentProgressRing />
+                <span>Computing PoW... @_currentNonce</span>
+            </Stack>
+            
+            <FluentButton Appearance="Appearance.Neutral" @onclick="CancelPoW">
+                <FluentIcon Name="@FluentIcons.Stop" Slot="start" Size="@IconSize.Size16" Color="Color.Error" />
+                Cancel
+            </FluentButton>
+        }
+    </Stack>
+    
+    @if (!string.IsNullOrEmpty(_generatedNonce))
+    {
+        <div>
+            <strong>Generated Nonce: </strong> @_generatedNonce
+            <div class="pow-valid m-t-1">
+                <Stack Orientation="Orientation.Horizontal" VerticalAlignment="StackVerticalAlignment.Center" HorizontalAlignment="StackHorizontalAlignment.Center">
+                    <FluentIcon Name="@FluentIcons.CheckmarkCircle" Slot="start" Size="@IconSize.Size20" Color="Color.Success"/>
+                    <strong>PoW Successfully Generated with difficulty @_generatedDifficulty</strong>
+                </Stack>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private int? _computedDifficulty;
+    private bool _isCalculating;
+    private bool _isGenerating;
+    private string? _generatedNonce;
+    private int? _generatedDifficulty;
+    private CancellationTokenSource? _cancellationTokenSource;
+    private int _nonceSize = 4;
+    private string _currentNonce = "";
+
+    [Parameter]
+    public string? EventId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> EventIdChangedCallback { get; set; }
+
+    [Parameter]
+    public int TargetDifficulty { get; set; } = 16;
+
+    [Parameter]
+    public EventCallback<int> TargetDifficultyChangedCallback { get; set; }
+    
+    [Parameter]
+    public string? Nonce { get; set; }
+    
+    [Parameter]
+    public EventCallback<string> NonceChangedEvent { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await CalculateDifficulty();
+    }
+
+    private async Task EventIdChanged(ChangeEventArgs args)
+    {
+        EventId = args.Value?.ToString();
+        if (EventIdChangedCallback.HasDelegate)
+        {
+            await EventIdChangedCallback.InvokeAsync(EventId);
+        }
+        await CalculateDifficulty();
+    }
+
+    private async Task TargetDifficultyChanged(ChangeEventArgs args)
+    {
+        if (args.Value == null || string.IsNullOrWhiteSpace(args.Value.ToString()))
+        {
+            TargetDifficulty = 0;
+        }
+        else
+        {
+            TargetDifficulty = Convert.ToInt32(args.Value);
+        }
+        
+        if (TargetDifficultyChangedCallback.HasDelegate)
+        {
+            await TargetDifficultyChangedCallback.InvokeAsync(TargetDifficulty);
+        }
+    }
+    
+    private async Task NonceChanged(ChangeEventArgs args)
+    {
+        Nonce = args.Value?.ToString();
+        if (NonceChangedEvent.HasDelegate)
+        {
+            await NonceChangedEvent.InvokeAsync(Nonce);
+        }
+        await CalculateDifficulty();
+    }
+    
+    private async Task NonceSizeChanged(ChangeEventArgs args)
+    {
+        if (args.Value == null || string.IsNullOrWhiteSpace(args.Value.ToString()))
+        {
+            _nonceSize = 4;
+        }
+        else
+        {
+            _nonceSize = Convert.ToInt32(args.Value);
+        }
+    }
+
+    private async Task CalculateDifficulty()
+    {
+        if (string.IsNullOrEmpty(EventId))
+        {
+            _computedDifficulty = null;
+            return;
+        }
+
+        _isCalculating = true;
+        StateHasChanged();
+
+        await Task.Run(() =>
+        {
+            string idToCheck = EventId;
+            if (!string.IsNullOrEmpty(Nonce))
+            {
+                idToCheck = Nonce + EventId;
+            }
+            
+            _computedDifficulty = CalculateLeadingZeroBits(idToCheck);
+        });
+
+        _isCalculating = false;
+        StateHasChanged();
+    }
+
+    private int CalculateLeadingZeroBits(string hex)
+    {
+        try
+        {
+            // Convert hex string to byte array
+            byte[] bytes = StringToByteArray(hex);
+            
+            // Calculate SHA-256
+            using SHA256 sha256 = SHA256.Create();
+            byte[] hash = sha256.ComputeHash(bytes);
+            
+            // Count leading zero bits
+            int leadingZeros = 0;
+            foreach (byte b in hash)
+            {
+                if (b == 0)
+                {
+                    leadingZeros += 8;
+                }
+                else
+                {
+                    int zeros = 0;
+                    for (int i = 7; i >= 0; i--)
+                    {
+                        if ((b & (1 << i)) == 0)
+                        {
+                            zeros++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    leadingZeros += zeros;
+                    break;
+                }
+            }
+            
+            return leadingZeros;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error calculating difficulty: {ex.Message}");
+            return 0;
+        }
+    }
+
+    private byte[] StringToByteArray(string hex)
+    {
+        int length = hex.Length;
+        byte[] bytes = new byte[length / 2];
+        
+        for (int i = 0; i < length; i += 2)
+        {
+            bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
+        }
+        
+        return bytes;
+    }
+    
+    private async Task GeneratePoW()
+    {
+        if (string.IsNullOrEmpty(EventId))
+        {
+            return;
+        }
+        
+        _isGenerating = true;
+        _generatedNonce = null;
+        _generatedDifficulty = null;
+        _cancellationTokenSource = new CancellationTokenSource();
+        var token = _cancellationTokenSource.Token;
+        
+        StateHasChanged();
+        
+        try
+        {
+            await Task.Run(async () =>
+            {
+                Random random = new Random();
+                byte[] nonceBytes = new byte[_nonceSize];
+                long attempts = 0;
+                
+                while (!token.IsCancellationRequested)
+                {
+                    // Generate random nonce
+                    random.NextBytes(nonceBytes);
+                    string nonceHex = BitConverter.ToString(nonceBytes).Replace("-", "").ToLower();
+                    _currentNonce = nonceHex;
+                    
+                    if (attempts % 100 == 0)
+                    {
+                        await InvokeAsync(StateHasChanged);
+                    }
+                    
+                    // Calculate difficulty with this nonce
+                    int difficulty = CalculateLeadingZeroBits(nonceHex + EventId);
+                    
+                    attempts++;
+                    
+                    // If we found a nonce that meets or exceeds the target difficulty
+                    if (difficulty >= TargetDifficulty)
+                    {
+                        _generatedNonce = nonceHex;
+                        _generatedDifficulty = difficulty;
+                        Nonce = nonceHex;
+                        
+                        if (NonceChangedEvent.HasDelegate)
+                        {
+                            await InvokeAsync(async () => await NonceChangedEvent.InvokeAsync(nonceHex));
+                        }
+                        
+                        break;
+                    }
+                }
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Operation was canceled
+        }
+        finally
+        {
+            _isGenerating = false;
+            _cancellationTokenSource.Dispose();
+            _cancellationTokenSource = null;
+            await CalculateDifficulty();
+            StateHasChanged();
+        }
+    }
+    
+    private void CancelPoW()
+    {
+        _cancellationTokenSource?.Cancel();
+    }
+}
