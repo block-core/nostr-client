@@ -115,7 +115,7 @@ More usage examples:
 - [ ] NIP-10: Conventions for clients' use of `e` and `p` tags in text events
 - [ ] NIP-11: Relay Information Document
 - [ ] NIP-12: Generic Tag Queries
-- [ ] NIP-13: Proof of Work
+- [x] NIP-13: Proof of Work
 - [ ] NIP-14: Subject tag in text events
 - [x] NIP-15: End of Stored Events Notice
 - [x] NIP-19: bech32-encoded entities
@@ -132,6 +132,33 @@ More usage examples:
 - [ ] NIP-65: Relay List Metadata
 
 **Pull Requests are welcome!**
+
+#### Proof of Work (NIP-13)
+
+```csharp
+// Create an event
+var ev = new NostrEvent
+{
+    Kind = NostrKind.ShortTextNote,
+    CreatedAt = DateTime.UtcNow,
+    Content = "This message includes proof of work to demonstrate NIP-13"
+};
+
+// Mine the event with difficulty 16 (leading zero bits)
+var minedEvent = await ev.GeneratePow(16);
+
+// Once mined, sign it with your private key
+var key = NostrPrivateKey.FromBech32("nsec1xxx");
+var signedMinedEvent = minedEvent.Sign(key);
+
+// Check the actual difficulty achieved
+int difficulty = signedMinedEvent.GetDifficulty();
+Console.WriteLine($"Event ID: {signedMinedEvent.Id}");
+Console.WriteLine($"Difficulty achieved: {difficulty} bits");
+
+// Send to relay
+client.Send(new NostrEventRequest(signedMinedEvent));
+```
 
 ### Reconnecting
 
