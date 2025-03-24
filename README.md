@@ -116,7 +116,7 @@ More usage examples:
 - [ ] NIP-11: Relay Information Document
 - [ ] NIP-12: Generic Tag Queries
 - [x] NIP-13: Proof of Work
-- [ ] NIP-14: Subject tag in text events
+- [x] NIP-14: Subject tag in text events
 - [x] NIP-15: End of Stored Events Notice
 - [x] NIP-19: bech32-encoded entities
 - [x] NIP-20: Command Results
