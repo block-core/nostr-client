@@ -1,0 +1,178 @@
+@page "/delegate-pow"
+@using System.Diagnostics
+@using NostrDebug.Web.Pow
+@implements IDisposable
+
+<PageHeader Title="Delegated Proof of Work" Subtitle="Using delegates for PoW calculation"></PageHeader>
+
+<div class="conversion-group">
+    <p>
+        This page demonstrates the use of delegates for reporting progress and completion of Proof of Work calculations.
+        The <code>PowCalculator</code> class uses delegates to report progress and completion of calculations.
+    </p>
+
+    <FluentTextField Style="width: 100%" Placeholder="hex" @bind-Value="@_eventId" class="m-b-1">
+        <FluentIcon Name="@FluentIcons.Document" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
+        <strong>Event ID</strong>
+    </FluentTextField>
+    
+    <FluentNumberField Style="width: 100%" Min="0" Max="256" Placeholder="Target difficulty" @bind-Value="@_targetDifficulty" class="m-b-1">
+        <FluentIcon Name="@FluentIcons.NumberSymbol" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
+        <strong>Target Difficulty</strong>
+    </FluentNumberField>
+    
+    <FluentNumberField Min="1" Max="32" @bind-Value="@_nonceSize" class="m-b-1">
+        <strong>Nonce Size</strong>
+    </FluentNumberField>
+    
+    <Stack Orientation="Orientation.Horizontal" HorizontalGap="10" class="m-b-1">
+        <FluentButton Appearance="Appearance.Accent" @onclick="StartCalculation" Disabled="@_isCalculating">
+            <FluentIcon Name="@FluentIcons.CalculatorMultiple" Slot="start" Size="@IconSize.Size16" Color="Color.Fill" />
+            Start PoW Calculation
+        </FluentButton>
+        
+        <FluentButton Appearance="Appearance.Neutral" @onclick="CancelCalculation" Disabled="@(!_isCalculating)">
+            <FluentIcon Name="@FluentIcons.Stop" Slot="start" Size="@IconSize.Size16" Color="Color.Error" />
+            Cancel
+        </FluentButton>
+    </Stack>
+    
+    @if (_isCalculating)
+    {
+        <div class="pow-progress m-b-1">
+            <Stack Orientation="Orientation.Horizontal" VerticalAlignment="StackVerticalAlignment.Center">
+                <FluentProgressRing />
+                <span>Calculating PoW... Current nonce: @_currentNonce, Difficulty: @_currentDifficulty, Attempts: @_attempts</span>
+            </Stack>
+        </div>
+    }
+    
+    @if (!string.IsNullOrEmpty(_resultNonce))
+    {
+        <div class="pow-valid m-t-1 m-b-1">
+            <Stack Orientation="Orientation.Vertical" VerticalGap="5">
+<Stack Orientation="Orientation.Horizontal" HorizontalGap="10" class="m-b-1">
+                        <FluentIcon Name="@FluentIcons.CheckmarkCircle" Slot="start" Size="@IconSize.Size20" Color="Color.Success"/>
+                    <strong>PoW Successfully Generated</strong>
+                </Stack>
+                <div><strong>Nonce:</strong> @_resultNonce</div>
+                <div><strong>Difficulty:</strong> @_resultDifficulty</div>
+                <div><strong>Total Attempts:</strong> @_totalAttempts.ToString("N0")</div>
+                <div><strong>Time Taken:</strong> @_elapsedTime ms (@(_elapsedTime / 1000.0) seconds)</div>
+                <div><strong>Speed:</strong> @((int)(_totalAttempts / (_elapsedTime / 1000.0))) hashes/second</div>
+            </Stack>
+        </div>
+    }
+    
+    @if (_calculationFailed)
+    {
+        <div class="pow-invalid m-t-1 m-b-1">
+            <Stack Orientation="Orientation.Horizontal" HorizontalGap="10" class="m-b-1">
+                <FluentIcon Name="@FluentIcons.ErrorCircle" Slot="start" Size="@IconSize.Size20" Color="Color.Error"/>
+                <strong>PoW Calculation Failed or Cancelled</strong>
+            </Stack>
+        </div>
+    }
+</div>
+
+@code {
+    private string _eventId = "";
+    private int _targetDifficulty = 16;
+    private int _nonceSize = 4;
+    
+    private bool _isCalculating;
+    private string _currentNonce = "";
+    private int _currentDifficulty;
+    private long _attempts;
+    
+    private string _resultNonce = "";
+    private int _resultDifficulty;
+    private long _totalAttempts;
+    private long _elapsedTime;
+    private bool _calculationFailed;
+    
+    // Create an instance of the PowCalculator
+    private PowCalculator _calculator = new PowCalculator();
+    
+    protected override void OnInitialized()
+    {
+        // Subscribe to the events using delegate methods
+        _calculator.OnProgress += ProgressHandler;
+        _calculator.OnCompletion += CompletionHandler;
+    }
+    
+    public void Dispose()
+    {
+        // Important: Unsubscribe from events when component is disposed
+        _calculator.OnProgress -= ProgressHandler;
+        _calculator.OnCompletion -= CompletionHandler;
+    }
+    
+    private async Task StartCalculation()
+    {
+        if (string.IsNullOrWhiteSpace(_eventId))
+        {
+            return;
+        }
+        
+        _isCalculating = true;
+        _resultNonce = "";
+        _calculationFailed = false;
+        _currentNonce = "";
+        _currentDifficulty = 0;
+        _attempts = 0;
+        
+        StateHasChanged();
+        
+        try
+        {
+            await _calculator.StartCalculation(_eventId, _targetDifficulty, _nonceSize);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error starting calculation: {ex.Message}");
+            _isCalculating = false;
+            _calculationFailed = true;
+            StateHasChanged();
+        }
+    }
+    
+    private void CancelCalculation()
+    {
+        _calculator.CancelCalculation();
+    }
+    
+    // Handler for progress updates - this is called via the delegate
+    private void ProgressHandler(string currentNonce, int difficulty, long attemptsCount)
+    {
+        _currentNonce = currentNonce;
+        _currentDifficulty = difficulty;
+        _attempts = attemptsCount;
+        
+        // Ensure UI updates
+        InvokeAsync(StateHasChanged);
+    }
+    
+    // Handler for completion notification - this is called via the delegate
+    private void CompletionHandler(bool success, string nonce, int difficulty, long totalAttempts, long elapsedMs)
+    {
+        _isCalculating = false;
+        
+        if (success)
+        {
+            _resultNonce = nonce;
+            _resultDifficulty = difficulty;
+            _totalAttempts = totalAttempts;
+            _elapsedTime = elapsedMs;
+        }
+        else
+        {
+            _calculationFailed = true;
+            _totalAttempts = totalAttempts;
+            _elapsedTime = elapsedMs;
+        }
+        
+        // Ensure UI updates
+        InvokeAsync(StateHasChanged);
+    }
+}

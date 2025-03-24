@@ -135,6 +135,10 @@ More usage examples:
 
 #### Proof of Work (NIP-13)
 
+Proof of Work in Nostr allows clients to demonstrate computational effort spent on creating an event. This can be used for spam reduction by requiring events to have a minimum difficulty level.
+
+##### Basic Usage
+
 ```csharp
 // Create an event
 var ev = new NostrEvent
@@ -158,6 +162,120 @@ Console.WriteLine($"Difficulty achieved: {difficulty} bits");
 
 // Send to relay
 client.Send(new NostrEventRequest(signedMinedEvent));
+```
+
+##### Validating Proof of Work
+
+When receiving an event, you can verify if it meets a minimum difficulty requirement:
+
+```csharp
+// Check if an event has a valid PoW with a difficulty of at least 15 bits
+int minDifficulty = 15;
+bool isValid = receivedEvent.HasValidPow(minDifficulty);
+if (isValid)
+{
+    Console.WriteLine($"Event has valid PoW with difficulty: {receivedEvent.GetDifficulty()} bits");
+}
+else
+{
+    Console.WriteLine("Event does not have sufficient proof of work");
+}
+```
+
+##### Advanced: Using Delegate-based Mining for Progress Updates
+
+For longer mining operations, you may want to receive progress updates and have more control over the mining process. The library provides a delegate-based approach for this:
+
+```csharp
+// Define delegate handlers for progress and completion
+void OnProgress(string currentNonce, int difficulty, long attemptsCount)
+{
+    Console.WriteLine($"Mining in progress - Current nonce: {currentNonce}, " +
+                      $"Current difficulty: {difficulty}, Attempts: {attemptsCount}");
+}
+
+void OnComplete(bool success, string nonce, int difficulty, long totalAttempts, long elapsedMs)
+{
+    if (success)
+    {
+        Console.WriteLine($"Mining successful! Found nonce: {nonce}");
+        Console.WriteLine($"Difficulty achieved: {difficulty} bits");
+        Console.WriteLine($"Total attempts: {totalAttempts:N0} in {elapsedMs}ms");
+        Console.WriteLine($"Hash rate: {totalAttempts * 1000 / elapsedMs} hashes/second");
+    }
+    else
+    {
+        Console.WriteLine($"Mining was cancelled or failed after {totalAttempts:N0} attempts");
+    }
+}
+
+// Create and configure a PoW calculator
+var calculator = new PowCalculator();
+calculator.OnProgress += OnProgress;  // Subscribe to progress updates
+calculator.OnCompletion += OnComplete;  // Subscribe to completion notification
+
+try
+{
+    // Start PoW calculation with target difficulty and specified nonce size (in bytes)
+    string eventId = myEvent.ComputeId();  // First compute the event ID
+    await calculator.StartCalculation(eventId, 20, 4);  // Target 20 bits, 4-byte nonce
+    
+    // The mining happens on a background thread, your UI remains responsive
+    
+    // If you need to cancel the calculation:
+    // calculator.CancelCalculation();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error in PoW calculation: {ex.Message}");
+}
+finally
+{
+    // Important: Unsubscribe when done to prevent memory leaks
+    calculator.OnProgress -= OnProgress;
+    calculator.OnCompletion -= OnComplete;
+}
+```
+
+##### Manual Mining with Low-level API
+
+For more control over the mining process, you can use the lower-level `EventMiner` class directly:
+
+```csharp
+// Create a new event
+var originalEvent = new NostrEvent
+{
+    Kind = NostrKind.ShortTextNote,
+    CreatedAt = DateTime.UtcNow,
+    Content = "Mining with low-level API"
+};
+
+// Set up cancellation (optional, for timeout)
+using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+
+try
+{
+    // Mine the event directly using the EventMiner
+    var minedEvent = await EventMiner.MineEventAsync(originalEvent, 16, cts.Token);
+    
+    Console.WriteLine($"Mining successful! Event ID: {minedEvent.Id}");
+    Console.WriteLine($"Difficulty: {minedEvent.GetDifficulty()} bits");
+    
+    // Find the nonce used
+    var nonceTag = minedEvent.Tags?.FindFirstTag("nonce");
+    if (nonceTag != null)
+    {
+        Console.WriteLine($"Nonce: {nonceTag.AdditionalData[0]}");
+        Console.WriteLine($"Target difficulty: {nonceTag.AdditionalData[1]}");
+    }
+    
+    // Send the event to a relay
+    client.Send(new NostrEventRequest(minedEvent));
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine("Mining was cancelled or timed out");
+}
 ```
 
 ### Reconnecting

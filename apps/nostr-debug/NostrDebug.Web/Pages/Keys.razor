@@ -5,16 +5,16 @@
 <Stack Orientation="Orientation.Vertical">
 
     <PageHeader Title="Keys" Subtitle="Tools for Nostr public & private keys"></PageHeader>
-    
+
     <h3><FluentIcon Name="@FluentIcons.New" Size="@IconSize.Size20" Variant="@IconVariant.Regular" Color="@Color.Neutral" /> New Keys</h3>
 
     <div class="conversion-group">
-        
+
         <FluentButton Appearance="Appearance.Neutral" @onclick="OnGenerate" class="m-b-1">
             Generate
-            <FluentIcon Name="@FluentIcons.Key" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" Variant="IconVariant.Regular"/>
+            <FluentIcon Name="@FluentIcons.Key" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" Variant="IconVariant.Regular" />
         </FluentButton>
-        
+
         @if (_generatedKeyPair != null)
         {
             <div>
@@ -35,9 +35,9 @@
         }
 
     </div>
-    
+
     <h3><FluentIcon Name="@FluentIcons.ArrowCircleRight" Size="@IconSize.Size20" Variant="@IconVariant.Regular" Color="@Color.Neutral" /> Derivation</h3>
-    
+
     <div class="conversion-group">
         <FluentTextField Style="width: 100%" Placeholder="nsec1xxx or hex" ValueExpression="() => _privateKey" Value="@_privateKey" @oninput="PrivateKeySet" class="m-b-1">
             <FluentIcon Name="@FluentIcons.Key" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
@@ -64,28 +64,28 @@
     </div>
 
     <h3><FluentIcon Name="@FluentIcons.Shield" Size="@IconSize.Size20" Variant="@IconVariant.Regular" Color="@Color.Neutral" /> Signing</h3>
-    
+
     <div class="conversion-group">
         <FluentTextField Style="width: 100%" Placeholder="npub1xxx or nsec1xxx" ValueExpression="() => _publicOrPrivateKeyForSignature" Value="@_publicOrPrivateKeyForSignature" @oninput="SignaturePrivateKeySet" class="m-b-1">
-            <FluentIcon Name="@FluentIcons.Key" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral"/>
+            <FluentIcon Name="@FluentIcons.Key" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
             <strong>Public or private key</strong>
         </FluentTextField>
-        
+
         <FluentTextField Style="width: 100%" Placeholder="hex" ValueExpression="() => _dataForSignature" Value="@_dataForSignature" @oninput="SignatureDataSet" class="m-b-1">
             <FluentIcon Name="@FluentIcons.Document" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
             <strong>Data</strong>
         </FluentTextField>
-        
+
         <FluentTextField Style="width: 100%" Placeholder="hex" ValueExpression="() => _signature" Value="@_signature" @oninput="SignatureSet" class="m-b-2">
             <FluentIcon Name="@FluentIcons.Signature" Slot="start" Size="@IconSize.Size16" Color="Color.Neutral" />
             <strong>Signature</strong>
         </FluentTextField>
-        
+
         <NostrSignatureValidator PublicOrPrivateKey="@_publicOrPrivateKeyForSignature" SignedData="@_dataForSignature" Signature="@_signature"></NostrSignatureValidator>
     </div>
 
     <h3><FluentIcon Name="@FluentIcons.CalculatorMultiple" Size="@IconSize.Size20" Variant="@IconVariant.Regular" Color="@Color.Neutral" /> Proof of Work (NIP-13)</h3>
-    
+
     <div class="conversion-group">
         <NostrPowValidator EventId="@_powEventId" Nonce="@_powNonce" TargetDifficulty="@_powTargetDifficulty"></NostrPowValidator>
     </div>
@@ -102,7 +102,7 @@
     string? _publicOrPrivateKeyForSignature;
     string? _dataForSignature;
     string? _signature;
-    
+
     string? _powEventId = "";
     string? _powNonce = "";
     int _powTargetDifficulty = 16;
