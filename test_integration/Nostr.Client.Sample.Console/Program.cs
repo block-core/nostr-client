@@ -41,6 +41,9 @@ var relays = new[]
     new Uri("wss://nos.lol"),
 };
 
+// Example of mining a Nostr event with proof of work
+await MineAndSendProofOfWorkExample(relays);
+
 using var multiClient = new NostrMultiWebsocketClient(logFactory.CreateLogger<NostrWebsocketClient>());
 var communicators = new List<NostrWebsocketCommunicator>();
 
@@ -160,4 +163,94 @@ void SendDirectMessage(INostrClient client)
     var signed = encrypted.Sign(sender);
 
     client.Send(new NostrEventRequest(signed));
+}
+
+static async Task MineAndSendProofOfWorkExample(Uri[] relays)
+{
+    try
+    {
+        Console.WriteLine("Mining a Nostr event with Proof of Work...");
+        
+        // Generate a new private key
+        var privateKey = NostrPrivateKey.GenerateNew();
+        var publicKey = privateKey.DerivePublicKey();
+        
+        Console.WriteLine($"Using public key: {publicKey.Bech32}");
+        
+        // Create an event to mine
+        var eventToMine = new NostrEvent
+        {
+            Kind = NostrKind.ShortTextNote,
+            CreatedAt = DateTime.UtcNow,
+            Content = "This is a test message with Proof of Work (NIP-13) from the Nostr.Client library.",
+            Pubkey = publicKey.Hex
+        };
+        
+        // Set difficulty target (10 bits = about 2.5 hex zeros)
+        int targetDifficulty = 10;
+        Console.WriteLine($"Mining with target difficulty: {targetDifficulty} bits...");
+        
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        
+        // Mine the event
+        var minedEvent = await eventToMine.GeneratePow(targetDifficulty, cancellationTokenSource.Token);
+        
+        // Get the achieved difficulty
+        int achievedDifficulty = minedEvent.GetDifficulty();
+        
+        Console.WriteLine($"Mining complete! Achieved difficulty: {achievedDifficulty} bits");
+        Console.WriteLine($"Event ID: {minedEvent.Id}");
+        
+        // Sign the mined event
+        var signedEvent = minedEvent.Sign(privateKey);
+        
+        // Connect to relay and send the event
+        using var communicator = new NostrWebsocketCommunicator(relays[0]);
+        using var client = new NostrWebsocketClient(communicator, null);
+        
+        TaskCompletionSource<bool> sentEvent = new TaskCompletionSource<bool>();
+        
+        // Setup event handling
+        client.Streams.EventStream.Subscribe(response => 
+        {
+            if (response?.Event?.Id == signedEvent.Id)
+            {
+                Console.WriteLine("Event was received back from relay!");
+                sentEvent.TrySetResult(true);
+            }
+        });
+        
+        client.Streams.OkStream.Subscribe(response =>
+        {
+            if (response?.EventId == signedEvent.Id)
+            {
+                Console.WriteLine($"Event was accepted by relay: {response.IsSuccess}");
+                if (!response.IsSuccess)
+                {
+                    Console.WriteLine($"Reason: {response.Message}");
+                }
+            }
+        });
+        
+        // Connect to relay
+        Console.WriteLine($"Connecting to relay {relays[0]}...");
+        await communicator.Start();
+        
+        // Send the event
+        Console.WriteLine("Sending mined event to relay...");
+        client.Send(new Nostr.Client.Requests.NostrEventRequest(signedEvent));
+        
+        // Wait for confirmation (or timeout after 15 seconds)
+        await Task.WhenAny(sentEvent.Task, Task.Delay(15000));
+        
+        Console.WriteLine("Proof of Work example completed.");
+    }
+    catch (OperationCanceledException)
+    {
+        Console.WriteLine("Mining was canceled (took too long).");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error in PoW example: {ex.Message}");
+    }
 }
