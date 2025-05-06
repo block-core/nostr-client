@@ -25,6 +25,6 @@ jobs:
     - name: Pack Nostr.Client project
       run: dotnet pack src/Nostr.Client/Nostr.Client.csproj --no-build --configuration Release --include-symbols -p:SymbolPackageFormat=snupkg -o .
     - name: Publish Nostr.Client (NuGet)
-      run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source "https://api.nuget.org/v3/index.json" --skip-duplicate
-    - name: Publish Nostr.Client (Github)
-      run: dotnet nuget push *.nupkg --api-key ${{secrets.PUBLISH_TO_GITHUB_TOKEN}} --source "https://nuget.pkg.github.com/marfusios/index.json" --skip-duplicate
+      run: dotnet nuget push *.nupkg --api-key ${{secrets.NUGET_KEY}} --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+    # - name: Publish Nostr.Client (Github)
+    #   run: dotnet nuget push *.nupkg --api-key ${{secrets.PUBLISH_TO_GITHUB_TOKEN}} --source "https://nuget.pkg.github.com/marfusios/index.json" --skip-duplicate
