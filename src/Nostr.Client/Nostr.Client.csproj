@@ -6,26 +6,24 @@
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 
-		<PackageId>Nostr.Client</PackageId>
+		<AssemblyTitle>Blockcore.Nostr.Client</AssemblyTitle>
+		<AssemblyName>Blockcore.Nostr.Client</AssemblyName>
+		<PackageId>Blockcore.Nostr.Client</PackageId>
 
-		<Authors>Mariusz Kotas</Authors>
 		<Description>Client for Nostr protocol</Description>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<PackageReleaseNotes>Enhancements</PackageReleaseNotes>
 		<Copyright>Copyright 2023 Mariusz Kotas. All rights reserved.</Copyright>
 		<PackageTags>Nostr relay websockets websocket client bitcoin</PackageTags>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-		<PackageProjectUrl>https://github.com/Marfusios/nostr-client</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/block-core/nostr-client</PackageProjectUrl>
 		<PackageIcon>icon.png</PackageIcon>
-		<RepositoryUrl>https://github.com/Marfusios/nostr-client</RepositoryUrl>
+		<RepositoryUrl>https://github.com/block-core/nostr-client</RepositoryUrl>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryType>Git</RepositoryType>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>$(NoWarn);1591</NoWarn>
-
-		<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -35,6 +33,10 @@
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="System.Reactive" Version="6.0.0" />
 		<PackageReference Include="Websocket.Client" Version="4.6.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Update="Microsoft.SourceLink.GitHub" Version="8.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
