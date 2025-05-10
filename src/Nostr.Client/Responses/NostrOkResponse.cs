@@ -24,5 +24,11 @@ namespace Nostr.Client.Responses
         /// </summary>
         [ArrayProperty(3)]
         public string? Message { get; init; }
+
+        /// <summary>
+        /// Indicates if the response is successful.
+        /// </summary>
+        [ArrayProperty(2)]
+        public bool IsSuccess { get; init; }
     }
 }
