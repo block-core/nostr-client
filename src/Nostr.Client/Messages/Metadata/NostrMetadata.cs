@@ -6,6 +6,11 @@ namespace Nostr.Client.Messages.Metadata
     {
         public string? Name { get; init; }
 
+        [JsonProperty("display_name")]
+        public string? DisplayName { get; init; }
+
+        public string? Website { get; init; }
+
         public string? About { get; init; }
 
         public string? Picture { get; init; }
