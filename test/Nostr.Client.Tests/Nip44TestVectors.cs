@@ -3,6 +3,7 @@ using Nostr.Client.Messages;
 using Nostr.Client.Messages.Direct;
 using Nostr.Client.Utils;
 using System.Text;
+using System.Security.Cryptography;
 
 namespace Nostr.Client.Tests
 {
@@ -19,17 +20,20 @@ namespace Nostr.Client.Tests
         [Fact]
         public void Nip44V2_GetConversationKey_ShouldMatchTestVector()
         {
-            // Test conversation key derivation (ECDH)
             var key1 = NostrPrivateKey.FromHex(TestPrivateKey1Hex);
             var key2 = NostrPrivateKey.FromHex(TestPrivateKey2Hex);
-            
             var key2Public = key2.DerivePublicKey();
-            var sharedKey = key1.DeriveSharedKey(key2Public);
-            var conversationKey = sharedKey.Ec.ToBytes().ToArray();
 
-            // The conversation key should be deterministic
+            // NIP-44 conversation key uses ECDH + HKDF-Extract
+            var conversationKey = key1.DeriveConversationKeyNip44(key2Public);
+
+            // Verify it's different from raw ECDH shared secret
+            var rawShared = key1.DeriveSharedKey(key2Public).Ec.ToBytes().ToArray();
+            Assert.NotEqual(BitConverter.ToString(conversationKey).Replace("-", "").ToLower(),
+                         BitConverter.ToString(rawShared).Replace("-", "").ToLower());
+            
+            // Verify the conversation key is 32 bytes
             Assert.Equal(32, conversationKey.Length);
-            Assert.NotEqual(new byte[32], conversationKey); // Should not be all zeros
         }
 
         [Fact]
@@ -416,8 +420,7 @@ namespace Nostr.Client.Tests
             var encrypted = ev.Encrypt(sender, recipientPublic, NostrEncryptionType.Nip44V2);
 
             // Decrypt with low-level API
-            var sharedKey = recipient.DeriveSharedKey(sender.DerivePublicKey());
-            var conversationKey = sharedKey.Ec.ToBytes().ToArray();
+            var conversationKey = recipient.DeriveConversationKeyNip44(sender.DerivePublicKey());
             var decryptedDirect = NostrEncryptionNip44.Decrypt(encrypted.Content!, conversationKey);
 
             Assert.Equal(message, decryptedDirect);
@@ -468,11 +471,8 @@ namespace Nostr.Client.Tests
             var key1 = NostrPrivateKey.FromHex(sec1Hex);
             var key2Public = NostrPublicKey.FromHex(pub2Hex);
             
-            var sharedKey = key1.DeriveSharedKey(key2Public);
-            var conversationKey = sharedKey.Ec.ToBytes().ToArray();
-            var conversationKeyHex = BitConverter.ToString(conversationKey).Replace("-", "").ToLower();
-
-            Assert.Equal(expectedConversationKeyHex, conversationKeyHex);
+            var conversationKey = key1.DeriveConversationKeyNip44(key2Public);
+            Assert.Equal(expectedConversationKeyHex, BitConverter.ToString(conversationKey).Replace("-", "").ToLower());
         }
 
         [Fact]
@@ -688,61 +688,16 @@ namespace Nostr.Client.Tests
             
             Assert.Equal(expectedPaddedLen, paddedPlaintextLen);
         }
-        
-        [Theory]
-        [InlineData(16, 32)]
-        [InlineData(32, 32)]
-        [InlineData(33, 64)]
-        [InlineData(37, 64)]
-        [InlineData(45, 64)]
-        [InlineData(49, 64)]
-        [InlineData(64, 64)]
-        [InlineData(65, 96)]
-        [InlineData(100, 128)]
-        [InlineData(111, 128)]
-        [InlineData(200, 224)]
-        [InlineData(250, 256)]
-        [InlineData(320, 320)]
-        [InlineData(383, 384)]
-        [InlineData(384, 384)]
-        [InlineData(400, 448)]
-        [InlineData(500, 512)]
-        [InlineData(512, 512)]
-        [InlineData(515, 640)]
-        [InlineData(700, 768)]
-        [InlineData(800, 896)]
-        [InlineData(900, 1024)]
-        [InlineData(1020, 1024)]
-        public void Nip44V2_PaddedLength_OfficialTestVectors_gemini(int plaintextLen, int expectedPaddedLen)
-        {
-            // Test that padding matches official specification
-            // The test vectors specify the padded plaintext size (NOT including 2-byte length prefix)
-            var sender = NostrPrivateKey.FromHex(TestPrivateKey1Hex);
-            var recipient = NostrPrivateKey.FromHex(TestPrivateKey2Hex);
-            var recipientPublic = recipient.DerivePublicKey();
-
-            var plaintext = new string('x', plaintextLen);
-            var ev = new NostrEvent { Content = plaintext, CreatedAt = DateTime.UtcNow };
-            var encrypted = ev.Encrypt(sender, recipientPublic, NostrEncryptionType.Nip44V2);
-            var payload = Convert.FromBase64String(encrypted.Content!);
-    
-            // NIP-44 v2 Payload Structure:
-            // [Version (1)] + [Nonce (32)] + [Padded Ciphertext (L_padded)] + [MAC (32)]
-    
-            // Calculate L_padded: the length of the PADDED input data (which is the ciphertext length)
-            var paddedDataLength = payload.Length - 1 - 32 - 32; // Total - Version - Nonce - MAC
-    
-            // The padded input data structure is:
-            // [2-byte Length Prefix] + [Plaintext Content] + [Zero Padding]
-    
-            // The expected test vector value (expectedPaddedLen) is:
-            // [Plaintext Content] + [Zero Padding]
-            var actualPaddedLen = paddedDataLength - 2; // Subtract the 2-byte length prefix
-    
-            Assert.Equal(expectedPaddedLen, actualPaddedLen);
-        }
 
         #endregion
+
+        // HKDF-Extract for NIP-44 v2 (salt="nip44-v2"). No expand step needed; output length = 32.
+        private static byte[] HkdfExtractNip44(byte[] ikm)
+        {
+            var salt = Encoding.ASCII.GetBytes("nip44-v2");
+            using var hmac = new HMACSHA256(salt);
+            return hmac.ComputeHash(ikm);
+        }
     }
 }
 

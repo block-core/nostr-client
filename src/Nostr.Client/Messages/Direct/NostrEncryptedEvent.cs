@@ -73,17 +73,18 @@ namespace Nostr.Client.Messages.Direct
                     "The encrypted event is not for the given private key. Sender or receiver pubkey doesn't match");
 
             var targetPubkey = NostrPublicKey.FromHex(targetPubkeyHex);
-            var sharedKey = privateKey.DeriveSharedKey(targetPubkey);
 
             // Detect encryption type
             if (InitializationVector == null)
             {
                 // No IV separator found, assume NIP-44 (base64 with version prefix)
-                return NostrEncryptionNip44.Decrypt(EncryptedContent, sharedKey.Ec.ToBytes().ToArray());
+                var conversationKey = privateKey.DeriveConversationKeyNip44(targetPubkey);
+                return NostrEncryptionNip44.Decrypt(EncryptedContent, conversationKey);
             }
             else
             {
                 // IV separator found, use NIP-04
+                var sharedKey = privateKey.DeriveSharedKey(targetPubkey);
                 var encrypted = new EncryptedBase64Data(EncryptedContent, InitializationVector);
                 var decrypted = NostrEncryption.DecryptBase64(encrypted, sharedKey);
                 var decryptedText = HashExtensions.ToString(decrypted);
@@ -113,29 +114,31 @@ namespace Nostr.Client.Messages.Direct
                 throw new InvalidOperationException("Recipient pubkey is not specified, can't encrypt");
 
             var recipientPubkey = NostrPublicKey.FromHex(recipientPubkeyHex);
-            var sharedKey = sender.DeriveSharedKey(recipientPubkey);
 
             string encryptedContent;
 
             switch (encryptionType)
             {
                 case NostrEncryptionType.Nip04:
+                    var sharedKeyNip04 = sender.DeriveSharedKey(recipientPubkey);
                     var plainText = HashExtensions.FromString(ev.Content ?? string.Empty);
-                    var encrypted = NostrEncryption.EncryptBase64(plainText, sharedKey);
+                    var encrypted = NostrEncryption.EncryptBase64(plainText, sharedKeyNip04);
                     encryptedContent = $"{encrypted.Text}{IvSeparator}{encrypted.Iv}";
                     break;
 
                 case NostrEncryptionType.Nip44V1:
+                    var conversationKeyV1 = sender.DeriveConversationKeyNip44(recipientPubkey);
                     encryptedContent = NostrEncryptionNip44.Encrypt(
                         ev.Content ?? string.Empty, 
-                        sharedKey.Ec.ToBytes().ToArray(), 
+                        conversationKeyV1, 
                         version: 1);
                     break;
 
                 case NostrEncryptionType.Nip44V2:
+                    var conversationKeyV2 = sender.DeriveConversationKeyNip44(recipientPubkey);
                     encryptedContent = NostrEncryptionNip44.Encrypt(
                         ev.Content ?? string.Empty, 
-                        sharedKey.Ec.ToBytes().ToArray(), 
+                        conversationKeyV2, 
                         version: 2);
                     break;
 
