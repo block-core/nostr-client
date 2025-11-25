@@ -10,6 +10,40 @@ namespace Nostr.Client.Tests
     /// <summary>
     /// NIP-44 test vectors from the official specification
     /// https://github.com/nostr-protocol/nips/blob/master/44.md
+    /// 
+    /// Test vectors source: https://github.com/paulmillr/nip44/blob/main/nip44.vectors.json
+    /// 
+    /// Test Coverage (125 total tests):
+    /// 
+    /// 1. v2.valid.get_conversation_key (36 tests)
+    ///    - Tests ECDH shared secret + HKDF-Extract with salt "nip44-v2"
+    ///    - Verifies conversation key derivation from private/public key pairs
+    ///    
+    /// 2. v2.valid.get_message_keys (22 tests)
+    ///    - Tests HKDF-Expand to derive ChaCha20 key (32B), nonce (12B), and HMAC key (32B)
+    ///    - Uses fixed conversation_key with different nonces
+    ///    
+    /// 3. v2.valid.calc_padded_len (23 tests)
+    ///    - Tests padding algorithm that hides message length
+    ///    - Covers plaintext sizes from 16 to 1020 bytes
+    ///    
+    /// 4. v2.valid.encrypt_decrypt (10 tests - random nonces)
+    ///    - Tests round-trip encryption/decryption with random nonces
+    ///    - Covers ASCII, Unicode, emoji, Arabic, Chinese, and multilingual text
+    ///    
+    /// 5. v2.valid.encrypt_decrypt (10 tests - fixed nonces)
+    ///    - Tests complete encryption flow with deterministic nonces
+    ///    - Verifies exact payload output matches official test vectors
+    ///    
+    /// 6. v2.valid.encrypt_decrypt_long_msg (3 tests)
+    ///    - Tests maximum size messages (up to 65,535 bytes)
+    ///    - Uses SHA256 hashes to verify correctness
+    ///    - Patterns: 'x' × 65535, '!' × 65535, '🦄' × 16383
+    ///    
+    /// 7. Additional functional tests (21 tests)
+    ///    - Edge cases: empty strings, max size, tampering, wrong recipients
+    ///    - Security: MAC validation, ciphertext tampering detection
+    ///    - Compatibility: version bytes, payload structure, bidirectional encryption
     /// </summary>
     public class Nip44TestVectors
     {
@@ -572,7 +606,16 @@ namespace Nostr.Client.Tests
             Assert.Equal(expectedConversationKeyHex, BitConverter.ToString(conversationKey).Replace("-", "").ToLower());
         }
 
+        #endregion
 
+        #region v2.valid.encrypt_decrypt - Basic Encryption/Decryption Tests (Random Nonces)
+
+        /// <summary>
+        /// Tests from v2.valid.encrypt_decrypt section (basic version)
+        /// Verifies encryption/decryption works with random nonces
+        /// 10 test vectors covering various character sets and languages
+        /// These tests verify round-trip encryption without checking exact payload output
+        /// </summary>
         [Theory]
         [InlineData(
             "0000000000000000000000000000000000000000000000000000000000000001",
@@ -635,6 +678,15 @@ namespace Nostr.Client.Tests
             }
         }
 
+        #endregion
+
+        #region v2.valid.calc_padded_len - Padding Length Calculation Tests
+
+        /// <summary>
+        /// Tests from v2.valid.calc_padded_len section
+        /// Verifies the padding algorithm that hides message length
+        /// 23 test vectors covering various plaintext sizes (16 to 1020 bytes)
+        /// </summary>
         [Theory]
         [InlineData(16, 32)]
         [InlineData(32, 32)]
@@ -686,8 +738,14 @@ namespace Nostr.Client.Tests
 
         #endregion
 
-        #region Get Message Keys Test Vectors
+        #region v2.valid.get_message_keys - Message Keys Derivation Tests
 
+        /// <summary>
+        /// Tests from v2.valid.get_message_keys section
+        /// Verifies HKDF-Expand to derive ChaCha20 key (32 bytes), nonce (12 bytes), and HMAC key (32 bytes)
+        /// Uses fixed conversation_key: a1a3d60f3470a8612633924e91febf96dc5366ce130f658b1f0fc652c20b3b54
+        /// 22 test vectors with different nonces
+        /// </summary>
         [Theory]
         [InlineData("e1e6f880560d6d149ed83dcc7e5861ee62a5ee051f7fde9975fe5d25d2a02d72",
             "f145f3bed47cb70dbeaac07f3a3fe683e822b3715edb7c4fe310829014ce7d76",
@@ -811,8 +869,14 @@ namespace Nostr.Client.Tests
 
         #endregion
 
-        #region Encrypt/Decrypt Test Vectors
+        #region v2.valid.encrypt_decrypt - Full Encryption/Decryption with Fixed Nonce Tests
 
+        /// <summary>
+        /// Tests from v2.valid.encrypt_decrypt section
+        /// Verifies complete encryption flow with deterministic nonces
+        /// Tests that encrypted payload exactly matches expected base64 output
+        /// 10 test vectors covering various character sets and languages
+        /// </summary>
         [Theory]
         [InlineData("0000000000000000000000000000000000000000000000000000000000000001",
             "0000000000000000000000000000000000000000000000000000000000000002",
@@ -893,6 +957,16 @@ namespace Nostr.Client.Tests
             Assert.Equal(plaintext, decrypted);
         }
 
+        #endregion
+
+        #region v2.valid.encrypt_decrypt_long_msg - Long Message Encryption Tests
+
+        /// <summary>
+        /// Tests from v2.valid.encrypt_decrypt_long_msg section
+        /// Verifies encryption of maximum size messages (up to 65,535 bytes)
+        /// Uses SHA256 hashes to verify plaintext and payload correctness
+        /// 3 test vectors: 'x' × 65535, '!' × 65535, '🦄' × 16383
+        /// </summary>
         [Theory]
         [InlineData("8fc262099ce0d0bb9b89bac05bb9e04f9bc0090acc181fef6840ccee470371ed",
             "326bcb2c943cd6bb717588c9e5a7e738edf6ed14ec5f5344caa6ef56f0b9cff7",
