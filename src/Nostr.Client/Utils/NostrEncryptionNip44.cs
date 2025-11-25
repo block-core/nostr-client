@@ -56,13 +56,21 @@ namespace Nostr.Client.Utils
 
         private static string EncryptV2(string plaintext, byte[] conversationKey)
         {
+            // Generate random nonce
+            var nonce = new byte[32];
+            RandomNumberGenerator.Fill(nonce);
+            
+            return EncryptV2(plaintext, conversationKey, nonce);
+        }
+
+        private static string EncryptV2(string plaintext, byte[] conversationKey, byte[] nonce)
+        {
             var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
             if (plaintextBytes.Length < MinPlaintextSize || plaintextBytes.Length > MaxPlaintextSize)
                 throw new ArgumentException($"Plaintext size must be between {MinPlaintextSize} and {MaxPlaintextSize} bytes", nameof(plaintext));
 
-            // Generate random nonce
-            var nonce = new byte[32];
-            RandomNumberGenerator.Fill(nonce);
+            if (nonce.Length != 32)
+                throw new ArgumentException("Nonce must be 32 bytes", nameof(nonce));
 
             // Derive message keys using HKDF
             var messageKeys = GetMessageKeys(conversationKey, nonce);

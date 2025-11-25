@@ -811,6 +811,147 @@ namespace Nostr.Client.Tests
 
         #endregion
 
+        #region Encrypt/Decrypt Test Vectors
+
+        [Theory]
+        [InlineData("0000000000000000000000000000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "a",
+            "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABee0G5VSK0/9YypIObAtDKfYEAjD35uVkHyB0F4DwrcNaCXlCWZKaArsGrY6M9wnuTMxWfp1RTN9Xga8no+kF5Vsb")]
+        [InlineData("0000000000000000000000000000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000000000000000000000000000001",
+            "f00000000000000000000000000000f00000000000000000000000000000000f",
+            "🍕🫃",
+            "AvAAAAAAAAAAAAAAAAAAAPAAAAAAAAAAAAAAAAAAAAAPSKSK6is9ngkX2+cSq85Th16oRTISAOfhStnixqZziKMDvB0QQzgFZdjLTPicCJaV8nDITO+QfaQ61+KbWQIOO2Yj")]
+        [InlineData("5c0c523f52a5b6fad39ed2403092df8cebc36318b39383bca6c00808626fab3a",
+            "4b22aa260e4acb7021e32f38a6cdf4b673c6a277755bfce287e370c924dc936d",
+            "b635236c42db20f021bb8d1cdff5ca75dd1a0cc72ea742ad750f33010b24f73b",
+            "表ポあA鷗ŒéＢ逍Üßªąñ丂㐀𠀀",
+            "ArY1I2xC2yDwIbuNHN/1ynXdGgzHLqdCrXUPMwELJPc7s7JqlCMJBAIIjfkpHReBPXeoMCyuClwgbT419jUWU1PwaNl4FEQYKCDKVJz+97Mp3K+Q2YGa77B6gpxB/lr1QgoqpDf7wDVrDmOqGoiPjWDqy8KzLueKDcm9BVP8xeTJIxs=")]
+        [InlineData("8f40e50a84a7462e2b8d24c28898ef1f23359fff50d8c509e6fb7ce06e142f9c",
+            "b9b0a1e9cc20100c5faa3bbe2777303d25950616c4c6a3fa2e3e046f936ec2ba",
+            "b20989adc3ddc41cd2c435952c0d59a91315d8c5218d5040573fc3749543acaf",
+            "ability🤝的 ȺȾ",
+            "ArIJia3D3cQc0sQ1lSwNWakTFdjFIY1QQFc/w3SVQ6yvbG2S0x4Yu86QGwPTy7mP3961I1XqB6SFFTzqDZZavhxoWMj7mEVGMQIsh2RLWI5EYQaQDIePSnXPlzf7CIt+voTD")]
+        [InlineData("875adb475056aec0b4809bd2db9aa00cff53a649e7b59d8edcbf4e6330b0995c",
+            "9c05781112d5b0a2a7148a222e50e0bd891d6b60c5483f03456e982185944aae",
+            "8d4442713eb9d4791175cb040d98d6fc5be8864d6ec2f89cf0895a2b2b72d1b1",
+            "pepper👀їжак",
+            "Ao1EQnE+udR5EXXLBA2Y1vxb6IZNbsL4nPCJWisrctGxY3AduCS+jTUgAAnfvKafkmpy15+i9YMwCdccisRa8SvzW671T2JO4LFSPX31K4kYUKelSAdSPwe9NwO6LhOsnoJ+")]
+        [InlineData("eba1687cab6a3101bfc68fd70f214aa4cc059e9ec1b79fdb9ad0a0a4e259829f",
+            "dff20d262bef9dfd94666548f556393085e6ea421c8af86e9d333fa8747e94b3",
+            "2180b52ae645fcf9f5080d81b1f0b5d6f2cd77ff3c986882bb549158462f3407",
+            "( ͡° ͜ʖ ͡°)",
+            "AiGAtSrmRfz59QgNgbHwtdbyzXf/PJhogrtUkVhGLzQHv4qhKQwnFQ54OjVMgqCea/Vj0YqBSdhqNR777TJ4zIUk7R0fnizp6l1zwgzWv7+ee6u+0/89KIjY5q1wu6inyuiv")]
+        [InlineData("d5633530f5bcfebceb5584cfbbf718a30df0751b729dd9a789b9f30c0587d74e",
+            "b74e6a341fb134127272b795a08b59250e5fa45a82a2eb4095e4ce9ed5f5e214",
+            "e4cd5f7ce4eea024bc71b17ad456a986a74ac426c2c62b0a15eb5c5c8f888b68",
+            "مُنَاقَشَةُ سُبُلِ اِسْتِخْدَامِ اللُّغَةِ فِي النُّظُمِ الْقَائِمَةِ وَفِيم يَخُصَّ التَّطْبِيقَاتُ الْحاسُوبِيَّةُ،",
+            "AuTNX3zk7qAkvHGxetRWqYanSsQmwsYrChXrXFyPiItoIBsWu1CB+sStla2M4VeANASHxM78i1CfHQQH1YbBy24Tng7emYW44ol6QkFD6D8Zq7QPl+8L1c47lx8RoODEQMvNCbOk5ffUV3/AhONHBXnffrI+0025c+uRGzfqpYki4lBqm9iYU+k3Tvjczq9wU0mkVDEaM34WiQi30MfkJdRbeeYaq6kNvGPunLb3xdjjs5DL720d61Flc5ZfoZm+CBhADy9D9XiVZYLKAlkijALJur9dATYKci6OBOoc2SJS2Clai5hOVzR0yVeyHRgRfH9aLSlWW5dXcUxTo7qqRjNf8W5+J4jF4gNQp5f5d0YA4vPAzjBwSP/5bGzNDslKfcAH")]
+        [InlineData("d5633530f5bcfebceb5584cfbbf718a30df0751b729dd9a789b9f30c0587d74e",
+            "b74e6a341fb134127272b795a08b59250e5fa45a82a2eb4095e4ce9ed5f5e214",
+            "38d1ca0abef9e5f564e89761a86cee04574b6825d3ef2063b10ad75899e4b023",
+            "الكل في المجمو عة (5)",
+            "AjjRygq++eX1ZOiXYahs7gRXS2gl0+8gY7EK11iZ5LAjbOTrlfrxak5Lki42v2jMPpLSicy8eHjsWkkMtF0i925vOaKG/ZkMHh9ccQBdfTvgEGKzztedqDCAWb5TP1YwU1PsWaiiqG3+WgVvJiO4lUdMHXL7+zKKx8bgDtowzz4QAwI=")]
+        [InlineData("d5633530f5bcfebceb5584cfbbf718a30df0751b729dd9a789b9f30c0587d74e",
+            "b74e6a341fb134127272b795a08b59250e5fa45a82a2eb4095e4ce9ed5f5e214",
+            "4f1a31909f3483a9e69c8549a55bbc9af25fa5bbecf7bd32d9896f83ef2e12e0",
+            "𝖑𝖆𝖟𝖞 社會科學院語學研究所",
+            "Ak8aMZCfNIOp5pyFSaVbvJryX6W77Pe9MtmJb4PvLhLgh/TsxPLFSANcT67EC1t/qxjru5ZoADjKVEt2ejdx+xGvH49mcdfbc+l+L7gJtkH7GLKpE9pQNQWNHMAmj043PAXJZ++fiJObMRR2mye5VHEANzZWkZXMrXF7YjuG10S1pOU=")]
+        [InlineData("d5633530f5bcfebceb5584cfbbf718a30df0751b729dd9a789b9f30c0587d74e",
+            "b74e6a341fb134127272b795a08b59250e5fa45a82a2eb4095e4ce9ed5f5e214",
+            "a3e219242d85465e70adcd640b564b3feff57d2ef8745d5e7a0663b2dccceb54",
+            "🙈 🙉 🙊 0️⃣ 1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟 Powerلُلُصّبُلُلصّبُررً ॣ ॣh ॣ ॣ冗",
+            "AqPiGSQthUZecK3NZAtWSz/v9X0u+HRdXnoGY7LczOtUf05aMF89q1FLwJvaFJYICZoMYgRJHFLwPiOHce7fuAc40kX0wXJvipyBJ9HzCOj7CgtnC1/cmPCHR3s5AIORmroBWglm1LiFMohv1FSPEbaBD51VXxJa4JyWpYhreSOEjn1wd0lMKC9b+osV2N2tpbs+rbpQem2tRen3sWflmCqjkG5VOVwRErCuXuPb5+hYwd8BoZbfCrsiAVLd7YT44dRtKNBx6rkabWfddKSLtreHLDysOhQUVOp/XkE7OzSkWl6sky0Hva6qJJ/V726hMlomvcLHjE41iKmW2CpcZfOedg==")]
+        public void Nip44V2_EncryptDecrypt_WithFixedNonce_OfficialTestVectors(string sec1Hex, string sec2Hex,
+            string nonceHex, string plaintext, string expectedPayload)
+        {
+            // These test vectors verify the full encryption flow with a specific nonce
+            var sec1 = NostrPrivateKey.FromHex(sec1Hex);
+            var sec2 = NostrPrivateKey.FromHex(sec2Hex);
+            var pub2 = sec2.DerivePublicKey();
+            var nonce = Convert.FromHexString(nonceHex);
+
+            // Get conversation key
+            var conversationKey = sec1.DeriveConversationKeyNip44(pub2);
+
+            // Encrypt with the specific nonce (we need to use reflection to call the method with a fixed nonce)
+            var encryptMethod = typeof(NostrEncryptionNip44).GetMethod("EncryptV2",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+                new[] { typeof(string), typeof(byte[]), typeof(byte[]) });
+            
+            Assert.NotNull(encryptMethod);
+            
+            var payload = (string)encryptMethod.Invoke(null, new object[] { plaintext, conversationKey, nonce })!;
+
+            // Verify the payload matches the expected value
+            Assert.Equal(expectedPayload, payload);
+
+            // Verify decryption works
+            var decrypted = NostrEncryptionNip44.Decrypt(payload, conversationKey);
+            Assert.Equal(plaintext, decrypted);
+        }
+
+        [Theory]
+        [InlineData("8fc262099ce0d0bb9b89bac05bb9e04f9bc0090acc181fef6840ccee470371ed",
+            "326bcb2c943cd6bb717588c9e5a7e738edf6ed14ec5f5344caa6ef56f0b9cff7",
+            "x", 65535,
+            "09ab7495d3e61a76f0deb12cb0306f0696cbb17ffc12131368c7a939f12f56d3",
+            "90714492225faba06310bff2f249ebdc2a5e609d65a629f1c87f2d4ffc55330a")]
+        [InlineData("56adbe3720339363ab9c3b8526ffce9fd77600927488bfc4b59f7a68ffe5eae0",
+            "ad68da81833c2a8ff609c3d2c0335fd44fe5954f85bb580c6a8d467aa9fc5dd0",
+            "!", 65535,
+            "6af297793b72ae092c422e552c3bb3cbc310da274bd1cf9e31023a7fe4a2d75e",
+            "8013e45a109fad3362133132b460a2d5bce235fe71c8b8f4014793fb52a49844")]
+        [InlineData("7fc540779979e472bb8d12480b443d1e5eb1098eae546ef2390bee499bbf46be",
+            "34905e82105c20de9a2f6cd385a0d541e6bcc10601d12481ff3a7575dc622033",
+            "🦄", 16383,
+            "a249558d161b77297bc0cb311dde7d77190f6571b25c7e4429cd19044634a61f",
+            "b3348422471da1f3c59d79acfe2fe103f3cd24488109e5b18734cdb5953afd15")]
+        public void Nip44V2_EncryptDecrypt_LongMessage_OfficialTestVectors(string conversationKeyHex,
+            string nonceHex, string pattern, int repeat, string expectedPlaintextSha256, 
+            string expectedPayloadSha256)
+        {
+            // These test vectors verify encryption of very long messages
+            var conversationKey = Convert.FromHexString(conversationKeyHex);
+            var nonce = Convert.FromHexString(nonceHex);
+            var plaintext = string.Concat(Enumerable.Repeat(pattern, repeat));
+
+            // Verify plaintext hash
+            using (var sha256 = SHA256.Create())
+            {
+                var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
+                var plaintextHash = sha256.ComputeHash(plaintextBytes);
+                Assert.Equal(expectedPlaintextSha256, 
+                    BitConverter.ToString(plaintextHash).Replace("-", "").ToLower());
+            }
+
+            // Encrypt with the specific nonce
+            var encryptMethod = typeof(NostrEncryptionNip44).GetMethod("EncryptV2",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+                new[] { typeof(string), typeof(byte[]), typeof(byte[]) });
+            
+            Assert.NotNull(encryptMethod);
+            
+            var payload = (string)encryptMethod.Invoke(null, new object[] { plaintext, conversationKey, nonce })!;
+
+            // Verify payload hash
+            using (var sha256 = SHA256.Create())
+            {
+                var payloadBytes = Encoding.UTF8.GetBytes(payload);
+                var payloadHash = sha256.ComputeHash(payloadBytes);
+                Assert.Equal(expectedPayloadSha256,
+                    BitConverter.ToString(payloadHash).Replace("-", "").ToLower());
+            }
+
+            // Verify decryption works
+            var decrypted = NostrEncryptionNip44.Decrypt(payload, conversationKey);
+            Assert.Equal(plaintext, decrypted);
+        }
+
+        #endregion
+
         // HKDF-Extract for NIP-44 v2 (salt="nip44-v2"). No expand step needed; output length = 32.
         private static byte[] HkdfExtractNip44(byte[] ikm)
         {
