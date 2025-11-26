@@ -107,7 +107,7 @@ namespace Nostr.Client.Messages.Direct
         /// Supports both NIP-04 and NIP-44 encryption.
         /// </summary>
         public static NostrEncryptedEvent Encrypt(NostrEvent ev, NostrPrivateKey sender, NostrKind? kind = null, 
-            NostrEncryptionType encryptionType = NostrEncryptionType.Nip04)
+            NostrEncryptionType encryptionType = NostrEncryptionType.Nip44V2)
         {
             var recipientPubkeyHex = ev.Tags?.FindFirstTagValue(NostrEventTag.ProfileIdentifier);
             if (recipientPubkeyHex == null)
