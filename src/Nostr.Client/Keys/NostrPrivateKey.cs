@@ -52,6 +52,38 @@ namespace Nostr.Client.Keys
         }
 
         /// <summary>
+        /// Derive NIP-44 conversation key between this private key and a public key.
+        /// Uses ECDH + HKDF-Extract as per NIP-44 specification.
+        /// Returns: 32-byte conversation key
+        /// </summary>
+        public byte[] DeriveConversationKeyNip44(NostrPublicKey publicKey)
+        {
+            // Step 1: Perform ECDH to get shared secret (shared_x)
+            // 32 + 1 byte for the compression (0x02) prefix.
+            Span<byte> input = stackalloc byte[33];
+            input[0] = 0x02;
+            publicKey.Ec.WriteToSpan(input[1..]);
+
+            var success = Context.Instance.TryCreatePubKey(input, out var prefixedPublicKey);
+            if (!success || prefixedPublicKey == null)
+                throw new InvalidOperationException("Can't create prefixed public key");
+
+            var sharedKey = prefixedPublicKey.GetSharedPubkey(Ec);
+            if (sharedKey == null)
+                throw new InvalidOperationException("Can't create shared public key");
+
+            // Get the x-coordinate (32 bytes) of the shared point
+            var sharedX = sharedKey.ToXOnlyPubKey().ToBytes().ToArray();
+
+            // Step 2: Apply HKDF-Extract with salt="nip44-v2"
+            // conversation_key = HKDF-Extract(IKM=shared_x, salt="nip44-v2")
+            var salt = System.Text.Encoding.UTF8.GetBytes("nip44-v2");
+            var conversationKey = HKDF.Extract(HashAlgorithmName.SHA256, sharedX, salt);
+
+            return conversationKey;
+        }
+
+        /// <summary>
         /// Sign hex with the private key. 
         /// Returns signature in hex format.
         /// </summary>

@@ -100,5 +100,145 @@ namespace Nostr.Client.Tests
             Assert.Equal("Hey from user 1", decryptedByUser1);
             Assert.Equal("Hey from user 1", decryptedByUser2);
         }
+
+        [Fact]
+        public void SendEvent_WithNip44V2_ShouldEncryptAndDecryptCorrectly()
+        {
+            var user1 = NostrPrivateKey.FromBech32("nsec1l0a7m5dlg4h9wurhnmgsq5nv9cqyvdwsutk4yf3w4fzzaqw7n80ssdfzkg");
+            var user2 = NostrPrivateKey.FromBech32("nsec1phvgvjs596qq0tq2h98xyunqg8r38yvwfg7pxt8mucfvr0jtlvks9k7uzu");
+            var user2Public = user2.DerivePublicKey();
+            var now = new DateTime(2023, 3, 10, 10, 58, 4, DateTimeKind.Utc);
+
+            var ev = new NostrEvent()
+            {
+                Kind = NostrKind.ShortTextNote,
+                Content = "Hello NIP-44 v2!",
+                CreatedAt = now
+            };
+
+            var encrypted = ev.Encrypt(user1, user2Public, NostrEncryptionType.Nip44V2);
+
+            Assert.Equal(now, encrypted.CreatedAt);
+            Assert.Equal(NostrKind.ShortTextNote, encrypted.Kind);
+            Assert.Equal(user2Public.Hex, encrypted.RecipientPubkey);
+            Assert.NotNull(encrypted.Content);
+            Assert.Null(encrypted.InitializationVector); // NIP-44 doesn't use IV separator
+            Assert.NotNull(encrypted.EncryptedContent);
+
+            var decryptedByUser1 = encrypted.DecryptContent(user1);
+            var decryptedByUser2 = encrypted.DecryptContent(user2);
+
+            Assert.Equal("Hello NIP-44 v2!", decryptedByUser1);
+            Assert.Equal("Hello NIP-44 v2!", decryptedByUser2);
+        }
+
+        [Fact]
+        public void SendEvent_WithNip44V1_ShouldEncryptAndDecryptCorrectly()
+        {
+            var user1 = NostrPrivateKey.FromBech32("nsec1l0a7m5dlg4h9wurhnmgsq5nv9cqyvdwsutk4yf3w4fzzaqw7n80ssdfzkg");
+            var user2 = NostrPrivateKey.FromBech32("nsec1phvgvjs596qq0tq2h98xyunqg8r38yvwfg7pxt8mucfvr0jtlvks9k7uzu");
+            var user2Public = user2.DerivePublicKey();
+            var now = new DateTime(2023, 3, 10, 10, 58, 4, DateTimeKind.Utc);
+
+            var ev = new NostrEvent()
+            {
+                Kind = NostrKind.ShortTextNote,
+                Content = "Hello NIP-44 v1!",
+                CreatedAt = now
+            };
+
+            var encrypted = ev.Encrypt(user1, user2Public, NostrEncryptionType.Nip44V1);
+
+            Assert.Equal(now, encrypted.CreatedAt);
+            Assert.Equal(NostrKind.ShortTextNote, encrypted.Kind);
+            Assert.Equal(user2Public.Hex, encrypted.RecipientPubkey);
+            Assert.NotNull(encrypted.Content);
+            Assert.Null(encrypted.InitializationVector); // NIP-44 doesn't use IV separator
+
+            var decryptedByUser1 = encrypted.DecryptContent(user1);
+            var decryptedByUser2 = encrypted.DecryptContent(user2);
+
+            Assert.Equal("Hello NIP-44 v1!", decryptedByUser1);
+            Assert.Equal("Hello NIP-44 v1!", decryptedByUser2);
+        }
+
+        [Fact]
+        public void SendDirectMessage_WithNip44V2_ShouldEncryptAndDecryptCorrectly()
+        {
+            var user1 = NostrPrivateKey.FromBech32("nsec1l0a7m5dlg4h9wurhnmgsq5nv9cqyvdwsutk4yf3w4fzzaqw7n80ssdfzkg");
+            var user2 = NostrPrivateKey.FromBech32("nsec1phvgvjs596qq0tq2h98xyunqg8r38yvwfg7pxt8mucfvr0jtlvks9k7uzu");
+            var user2Public = user2.DerivePublicKey();
+            var now = new DateTime(2023, 3, 10, 10, 58, 4, DateTimeKind.Utc);
+
+            var ev = new NostrEvent()
+            {
+                Kind = NostrKind.ShortTextNote,
+                Content = "Secret DM with NIP-44 v2",
+                CreatedAt = now
+            };
+
+            var encrypted = ev.EncryptDirect(user1, user2Public, NostrEncryptionType.Nip44V2);
+
+            Assert.Equal(now, encrypted.CreatedAt);
+            Assert.Equal(NostrKind.EncryptedDm, encrypted.Kind);
+            Assert.Equal(user2Public.Hex, encrypted.RecipientPubkey);
+
+            var decryptedByUser1 = encrypted.DecryptContent(user1);
+            var decryptedByUser2 = encrypted.DecryptContent(user2);
+
+            Assert.Equal("Secret DM with NIP-44 v2", decryptedByUser1);
+            Assert.Equal("Secret DM with NIP-44 v2", decryptedByUser2);
+        }
+
+        [Fact]
+        public void Nip44V2_WithLongMessage_ShouldEncryptAndDecryptCorrectly()
+        {
+            var user1 = NostrPrivateKey.FromBech32("nsec1l0a7m5dlg4h9wurhnmgsq5nv9cqyvdwsutk4yf3w4fzzaqw7n80ssdfzkg");
+            var user2 = NostrPrivateKey.FromBech32("nsec1phvgvjs596qq0tq2h98xyunqg8r38yvwfg7pxt8mucfvr0jtlvks9k7uzu");
+            var user2Public = user2.DerivePublicKey();
+
+            // Create a long message
+            var longMessage = string.Join(" ", Enumerable.Repeat("This is a test message.", 100));
+
+            var ev = new NostrEvent()
+            {
+                Kind = NostrKind.ShortTextNote,
+                Content = longMessage,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var encrypted = ev.Encrypt(user1, user2Public, NostrEncryptionType.Nip44V2);
+
+            var decryptedByUser1 = encrypted.DecryptContent(user1);
+            var decryptedByUser2 = encrypted.DecryptContent(user2);
+
+            Assert.Equal(longMessage, decryptedByUser1);
+            Assert.Equal(longMessage, decryptedByUser2);
+        }
+
+        [Fact]
+        public void Nip44V2_WithUnicodeMessage_ShouldEncryptAndDecryptCorrectly()
+        {
+            var user1 = NostrPrivateKey.FromBech32("nsec1l0a7m5dlg4h9wurhnmgsq5nv9cqyvdwsutk4yf3w4fzzaqw7n80ssdfzkg");
+            var user2 = NostrPrivateKey.FromBech32("nsec1phvgvjs596qq0tq2h98xyunqg8r38yvwfg7pxt8mucfvr0jtlvks9k7uzu");
+            var user2Public = user2.DerivePublicKey();
+
+            var unicodeMessage = "Hello 👋 World 🌍 こんにちは 你好 🚀";
+
+            var ev = new NostrEvent()
+            {
+                Kind = NostrKind.ShortTextNote,
+                Content = unicodeMessage,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var encrypted = ev.Encrypt(user1, user2Public, NostrEncryptionType.Nip44V2);
+
+            var decryptedByUser1 = encrypted.DecryptContent(user1);
+            var decryptedByUser2 = encrypted.DecryptContent(user2);
+
+            Assert.Equal(unicodeMessage, decryptedByUser1);
+            Assert.Equal(unicodeMessage, decryptedByUser2);
+        }
     }
 }
