@@ -9,7 +9,7 @@
     "assembly": {
       "Blazored.LocalStorage.dll": "sha256-eXVgTw72kEn74FZgDQbLtvAmXbiZDSj5gzUnxVmwowQ=",
       "BlazorMonaco.dll": "sha256-Hbwc+8Nc7E6NYECP0pDCuU7w9KjJoNK0LYI95D\/mJEI=",
-      "Blockcore.Nostr.Client.dll": "sha256-U0COmCFsdX4+G17MFnHSZNLV4VvhMz+UIkywYqsn4hg=",
+      "Blockcore.Nostr.Client.dll": "sha256-nDHECVnYTOoGbcbyTk1nJPcrY2zSOihsXmJViBheW24=",
       "BTCPayServer.Lightning.Common.dll": "sha256-Wjf69KVhpZOaKrNBGwWLRwKELES9pH4dOtvW0nGfZn8=",
       "Microsoft.AspNetCore.Components.dll": "sha256-htZfOPFWipgnRjUgoH7QcgSA+HNK\/iBbZGk6WkOuScE=",
       "Microsoft.AspNetCore.Components.Forms.dll": "sha256-pdy25RoEemLFtE3AGpHvhM7skYWUEJVT7XK0UMJdbb4=",
@@ -32,7 +32,7 @@
       "NBitcoin.dll": "sha256-KR72yCmOqKkPD9aQF2j8zVfHpq9+WvrrS8RXaueJO+g=",
       "NBitcoin.Secp256k1.dll": "sha256-Bf0pejGhwzmkPS66o5X5zvinaEVx7lcrpGLPdfF6OzI=",
       "Newtonsoft.Json.dll": "sha256-IsZJ91\/OW+fHzNqIgEc7Y072ns8z9dGritiSyvR9Wgc=",
-      "NostrDebug.Web.dll": "sha256-elgLW7nquBHueNHYn4IZsnKPFV6\/J6W27saWcK17iYE=",
+      "NostrDebug.Web.dll": "sha256-gNU8+o\/z8l1fXlgpkr\/PZm1Nhl5\/4kNbBxla60rEEzc=",
       "System.Collections.Concurrent.dll": "sha256-AZBbDD9vJsrdoFHB2AF4VXkGH41Ah6Ch9ICLiMlOy1U=",
       "System.Collections.dll": "sha256-jmiY047uRfinU4JAj7a4H+q5FYsLZHgIEhD+45XVPaA=",
       "System.Collections.NonGeneric.dll": "sha256-3Joi5rUPb7f0xqb53EWVYz4MUyOY6OUMpCk31KC7eVc=",
