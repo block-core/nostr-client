@@ -1,0 +1,30 @@
+@page "/pow"
+@using Nostr.Client.Utils
+
+<Stack Orientation="Orientation.Vertical">
+
+    <PageHeader Title="Proof of Work" Subtitle="NIP-13 Proof of Work for Nostr events"></PageHeader>
+    
+    <div class="conversion-group">
+        <p>
+            <FluentIcon Name="@FluentIcons.CalculatorMultiple" Size="@IconSize.Size20" Variant="@IconVariant.Regular" Color="@Color.Neutral" /> 
+            Proof of Work in Nostr allows users to demonstrate computational effort spent on creating an event. 
+            This can be used for spam reduction by requiring events to have a minimum difficulty level.
+        </p>
+        <p>
+            The difficulty is measured by the number of leading zero bits in the SHA-256 hash of the nonce concatenated with the event ID.
+        </p>
+    </div>
+    
+    <div class="conversion-group">
+        <NostrPowValidator EventId="@_eventId" Nonce="@_nonce" TargetDifficulty="@_targetDifficulty"></NostrPowValidator>
+    </div>
+
+</Stack>
+
+@code
+{
+    private string _eventId = "";
+    private string _nonce = "";
+    private int _targetDifficulty = 20;
+}

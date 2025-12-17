@@ -301,5 +301,64 @@ namespace Nostr.Client.Messages
         {
             return json.Replace(value, replacement);
         }
+
+        /// <summary>
+        /// Gets the difficulty (number of leading zero bits) of the event's ID
+        /// </summary>
+        /// <returns>Number of leading zero bits in the event ID</returns>
+        public int GetDifficulty()
+        {
+            if (string.IsNullOrEmpty(Id))
+                return 0;
+
+            return NostrPow.Mining.DifficultyCalculator.CountLeadingZeroBits(Id);
+        }
+
+        /// <summary>
+        /// Gets the target difficulty from the nonce tag if available
+        /// </summary>
+        /// <returns>Target difficulty value or null if not specified</returns>
+        public int? GetTargetDifficulty()
+        {
+            var nonceTag = Tags?.FindFirstTag("nonce");
+            if (nonceTag == null || nonceTag.AdditionalData.Length < 2)
+                return null;
+
+            if (int.TryParse(nonceTag.AdditionalData[1], out var targetDifficulty))
+                return targetDifficulty;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Check if the event has a valid proof of work at the specified minimum difficulty
+        /// </summary>
+        /// <param name="minDifficulty">Minimum required difficulty</param>
+        /// <returns>True if the event has enough proof of work</returns>
+        public bool HasValidPow(int minDifficulty)
+        {
+            // Get the actual difficulty
+            var difficulty = GetDifficulty();
+            if (difficulty < minDifficulty)
+                return false;
+
+            // Verify the committed target difficulty if present
+            var targetDifficulty = GetTargetDifficulty();
+            if (targetDifficulty.HasValue && targetDifficulty.Value < minDifficulty)
+                return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Generate proof of work for this event by mining for a nonce that creates an ID with the specified difficulty
+        /// </summary>
+        /// <param name="difficulty">Target difficulty in bits</param>
+        /// <param name="cancellationToken">Cancellation token to stop mining</param>
+        /// <returns>A new event with the proof of work</returns>
+        public async Task<NostrEvent> GeneratePow(int difficulty, CancellationToken cancellationToken = default)
+        {
+            return await NostrPow.Mining.EventMiner.MineEventAsync(this, difficulty, cancellationToken);
+        }
     }
 }
