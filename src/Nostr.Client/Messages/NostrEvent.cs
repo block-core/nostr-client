@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿﻿using System.Diagnostics;
 using Newtonsoft.Json;
 using Nostr.Client.Json;
 using Nostr.Client.Keys;
@@ -220,6 +220,69 @@ namespace Nostr.Client.Messages
 
             var clone = DeepClone(null, null, sender.Hex, tagsWithReceiver);
             return NostrEncryptedEvent.Encrypt(clone, sender, kind);
+        }
+
+        /// <summary>
+        /// Validate proof of work for this event according to NIP-13
+        /// </summary>
+        /// <param name="minimumDifficulty">Optional minimum difficulty to enforce (default: 0)</param>
+        /// <returns>True if the event has valid proof of work, false otherwise</returns>
+        public bool ValidateProofOfWork(int minimumDifficulty = 0)
+        {
+            return NostrProofOfWork.ValidateProofOfWork(this, minimumDifficulty);
+        }
+
+        /// <summary>
+        /// Get the difficulty (number of leading zero bits) for this event
+        /// </summary>
+        /// <returns>Number of leading zero bits in the event ID</returns>
+        public int GetDifficulty()
+        {
+            return NostrProofOfWork.GetDifficulty(this);
+        }
+
+        /// <summary>
+        /// Get the target difficulty from the nonce tag
+        /// </summary>
+        /// <returns>Target difficulty from nonce tag, or 0 if no valid nonce tag</returns>
+        public int GetTargetDifficulty()
+        {
+            return NostrProofOfWork.GetTargetDifficulty(this);
+        }
+
+        /// <summary>
+        /// Mine proof of work for this event according to NIP-13
+        /// This will add/update the nonce tag and return a new event with a valid proof of work
+        /// </summary>
+        /// <param name="targetDifficulty">Target number of leading zero bits</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <param name="maxIterations">Maximum number of iterations before giving up</param>
+        /// <returns>New event with valid proof of work, or null if mining was cancelled or max iterations reached</returns>
+        public NostrEvent? MineProofOfWork(
+            int targetDifficulty,
+            CancellationToken cancellationToken = default,
+            long maxIterations = long.MaxValue)
+        {
+            return NostrProofOfWork.MineProofOfWork(this, targetDifficulty, cancellationToken, maxIterations);
+        }
+
+        /// <summary>
+        /// Mine proof of work for this event with progress reporting
+        /// </summary>
+        /// <param name="targetDifficulty">Target number of leading zero bits</param>
+        /// <param name="progressCallback">Callback that receives current nonce and best difficulty found so far</param>
+        /// <param name="progressReportInterval">Report progress every N iterations (default: 10000)</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <param name="maxIterations">Maximum number of iterations before giving up</param>
+        /// <returns>New event with valid proof of work, or null if mining was cancelled or max iterations reached</returns>
+        public NostrEvent? MineProofOfWork(
+            int targetDifficulty,
+            Action<long, int> progressCallback,
+            int progressReportInterval = 10000,
+            CancellationToken cancellationToken = default,
+            long maxIterations = long.MaxValue)
+        {
+            return NostrProofOfWork.MineProofOfWork(this, targetDifficulty, progressCallback, progressReportInterval, cancellationToken, maxIterations);
         }
 
         private byte[] ComputeIdBytes()
