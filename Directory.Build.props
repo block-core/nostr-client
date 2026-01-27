@@ -3,7 +3,7 @@
 	<!-- Project defaults -->
 
 	<PropertyGroup>
-		<Version>2.0.1</Version>
+		<Version>2.0.2</Version>
 		<IsPackable>true</IsPackable>
 		<Authors>Blockcore</Authors>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
