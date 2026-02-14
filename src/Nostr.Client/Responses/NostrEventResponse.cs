@@ -14,5 +14,12 @@ namespace Nostr.Client.Responses
         [ArrayProperty(2)]
         [JsonConverter(typeof(NostrEventConverter))]
         public NostrEvent? Event { get; init; }
+
+        /// <summary>
+        /// Check if the event signature is valid.
+        /// Returns false if event is null or signature verification fails.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsSignatureValid => Event?.IsSignatureValid() ?? false;
     }
 }

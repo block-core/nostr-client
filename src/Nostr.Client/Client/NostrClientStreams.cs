@@ -15,9 +15,17 @@ namespace Nostr.Client.Client
         internal readonly Subject<NostrRawResponse> UnknownRawSubject = new();
 
         /// <summary>
-        /// Requested Nostr events
+        /// Requested Nostr events (includes all events, signature not validated)
         /// </summary>
         public IObservable<NostrEventResponse> EventStream => EventSubject.AsObservable();
+
+        /// <summary>
+        /// Requested Nostr events with valid signatures only.
+        /// Events with invalid or missing signatures are filtered out.
+        /// </summary>
+        public IObservable<NostrEventResponse> ValidEventStream => EventSubject
+            .AsObservable()
+            .Where(x => x.IsSignatureValid);
 
         /// <summary>
         /// Human-readable messages
