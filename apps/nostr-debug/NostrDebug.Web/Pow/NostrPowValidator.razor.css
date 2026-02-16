@@ -1,0 +1,29 @@
+.pow-container {
+    width: 100%;
+}
+
+.pow-valid {
+    padding: 10px;
+    border: dotted 2px var(--success);
+    border-radius: 5px;
+    color: var(--success);
+}
+
+.pow-invalid {
+    padding: 10px;
+    border: dotted 2px var(--error);
+    border-radius: 5px;
+    color: var(--error);
+}
+
+.pow-progress {
+    margin: 10px 0;
+}
+
+.m-t-1 {
+    margin-top: 10px;
+}
+
+.m-b-1 {
+    margin-bottom: 10px;
+}
